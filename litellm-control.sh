@@ -37,6 +37,9 @@ show_help() {
     echo "  -p, --port <port>   Specify the port (default: $DEFAULT_PORT)"
     echo "  -h, --host <host>   Specify the bind host (default: $DEFAULT_HOST)"
     echo "  --foreground        Start in foreground mode (keeps terminal attached)"
+    echo ""
+    echo "Options for 'logs':"
+    echo "  Any tail options can be passed (e.g., -f to follow, -n 200)"
 }
 
 ACTION="$1"
@@ -210,7 +213,20 @@ status_server() {
 show_logs() {
     if [ -f "$LOG_FILE" ]; then
         echo "=== LiteLLM Console Logs ($LOG_FILE) ==="
-        tail -n 100 "$LOG_FILE"
+        FOLLOW=false
+        for arg in "${OTHER_ARGS[@]}"; do
+            if [ "$arg" = "-f" ] || [ "$arg" = "--follow" ]; then
+                FOLLOW=true
+            fi
+        done
+
+        if [ "$FOLLOW" = true ]; then
+            tail -f -n 100 "$LOG_FILE"
+        elif [ ${#OTHER_ARGS[@]} -gt 0 ]; then
+            tail "${OTHER_ARGS[@]}" "$LOG_FILE"
+        else
+            tail -n 100 "$LOG_FILE"
+        fi
     else
         echo "Nenhum log encontrado em $LOG_FILE"
     fi
