@@ -1,0 +1,10 @@
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.pid
+.DS_Store
+*.sqlite
+.env
+logs/

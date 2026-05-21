@@ -1,0 +1,15 @@
+model_list:
+  - model_name: gemini-3.1-pro-preview
+    litellm_params:
+      model: gemini/gemini-3.1-pro-preview
+      api_key: "os.environ/GOOGLE_API_KEY"
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+
+general_settings:
+  master_key: "sk-her...2345"
+  database_url: "postgresql://litellm@localhost/litellm"
+  store_model_in_db: true
+  store_prompts_in_spend_logs: true
