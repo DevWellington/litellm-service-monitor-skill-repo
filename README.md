@@ -43,15 +43,15 @@ You can use the controller to manage the background daemon easily:
 To run `litellm` commands globally as any user on the system, you can symlink or copy this script to `/usr/local/bin`:
 
 ```bash
-sudo cp /app/vt422387/litellm/litellm-control.sh /usr/local/bin/litellm-proxy
-sudo chmod +x /usr/local/bin/litellm-proxy
+sudo cp /app/vt422387/litellm/litellm-control.sh /usr/local/bin/litellm-control
+sudo chmod +x /usr/local/bin/litellm-control
 ```
 
 Then simply manage the proxy using:
 ```bash
-litellm-proxy start -p 4000
-litellm-proxy status
-litellm-proxy stop
+litellm-control start -p 4000
+litellm-control status
+litellm-control stop
 ```
 
 ---
@@ -96,13 +96,13 @@ Utilize o script de controle para gerenciar o servidor de forma limpa:
 Para executar os comandos do proxy de qualquer lugar do sistema, instale o script no `/usr/local/bin`:
 
 ```bash
-sudo cp /app/vt422387/litellm/litellm-control.sh /usr/local/bin/litellm-proxy
-sudo chmod +x /usr/local/bin/litellm-proxy
+sudo cp /app/vt422387/litellm/litellm-control.sh /usr/local/bin/litellm-control
+sudo chmod +x /usr/local/bin/litellm-control
 ```
 
 E gerencie usando:
 ```bash
-litellm-proxy start
-litellm-proxy status
-litellm-proxy stop
+litellm-control start
+litellm-control status
+litellm-control stop
 ```
