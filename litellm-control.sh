@@ -130,8 +130,8 @@ start_server() {
         
         # Verify success
         HEALTHY=false
-        for i in {1..60}; do
-            sleep 0.5
+        for i in {1..90}; do
+            sleep 1
             if ! ps -p "$BG_PID" > /dev/null 2>&1; then
                 break
             fi
