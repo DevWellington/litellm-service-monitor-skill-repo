@@ -6,7 +6,7 @@
 LITELLM_DIR="/app/vt422387/litellm"
 LITELLM_BIN="/home/vt422387/.local/bin/litellm"
 DEFAULT_PORT="4000"
-DEFAULT_HOST="127.0.0.1"
+DEFAULT_HOST="0.0.0.0"
 
 # Automatically fallback to /opt/litellm if it exists and is preferred
 if [ -d "/opt/litellm" ]; then
