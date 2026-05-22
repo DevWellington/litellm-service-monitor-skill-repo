@@ -28,9 +28,22 @@ Inicia o LiteLLM em segundo plano (modo daemon) por padrão:
   ```bash
   ./litellm-control.sh start -p 4001
   ```
-- **Host Personalizado:** Por padrão, o proxy escuta em `127.0.0.1` para segurança. Se precisar expor para outras interfaces (por exemplo, `0.0.0.0`), use `-h`:
+- **Host Personalizado:** Por padrão, o proxy escuta em `0.0.0.0` para permitir acesso público de outras máquinas da rede. Se precisar restringir a escuta apenas localmente (por exemplo, `127.0.0.1`), use `-h` ou `--host`:
   ```bash
-  ./litellm-control.sh start -h 0.0.0.0
+  ./litellm-control.sh start -h 127.0.0.1
+  ```
+- **Expondo Publicamente em uma Porta Livre (Multi-Instâncias):** Para disponibilizar o LiteLLM para outras máquinas da rede sem conflito com a instância de localhost principal, crie um arquivo de controle separado para evitar colisões de PID (como `litellm-public-control.sh`). 
+  
+  O script de controle padrão (`litellm-control.sh`) gerencia apenas uma única instância por diretório e trava se o arquivo `litellm.pid` já existir. Para rodar instâncias paralelas (uma local e outra pública), crie um script espelho alterando as seguintes variáveis no cabeçalho:
+  ```bash
+  DEFAULT_PORT="4001"
+  DEFAULT_HOST="0.0.0.0"
+  PID_FILE="${LITELLM_DIR}/litellm-public.pid"
+  LOG_FILE="${LOG_DIR}/litellm-public-stdout.log"
+  ```
+  Isso permite gerenciar a instância pública de forma totalmente independente:
+  ```bash
+  /app/vt422387/litellm/litellm-public-control.sh start
   ```
 - **Modo Foreground:** Útil para ver logs em tempo real na tela e debugar a conexão:
   ```bash
@@ -94,9 +107,17 @@ litellm-control stop
 A **LiteLLM Admin UI** não é um serviço separado; ela é integrada e servida de forma nativa pelo próprio processo do LiteLLM Proxy (quando configurada com um banco de dados relacional como PostgreSQL no `config.yaml`).
 
 * **Acesso:** Fica disponível automaticamente na mesma porta configurada, no subcaminho `/ui` (ex: `http://127.0.0.1:4000/ui`).
+* **Credenciais de Acesso (Master Key / Password):**
+  * Para fazer login ou fazer requisições administrativas na UI, utilize a **Master Key** do LiteLLM como token/senha.
+  * No LiteLLM local (daemon), a chave está em `/app/vt422387/litellm/config.yaml` sob `general_settings -> master_key`.
+  * Na stack Docker Compose, ela está definida em `/home/vt422387/hermes-stack-vtal/.env` sob `MASTER_KEY` (e injetada via `LITELLM_MASTER_KEY` no arquivo `docker-compose.yml`).
 * **Ciclo de vida:** Ao utilizar o controlador `litellm-control`, você está controlando tanto as conexões de API quanto a interface web do painel administrativo conjuntamente. Ao parar ou reiniciar o proxy, a UI seguirá as mesmas ações.
 
 ---
+
+## Templates (Docker Stack)
+A skill possui templates em `templates/` com a configuração completa e isolada do Docker Compose para rodar o LiteLLM com banco próprio, integrado ao Hermes e WebUI e contornando o proxy corporativo:
+- `templates/hermes-stack-docker-compose.yml`
 
 ## Solução de Problemas (Troubleshooting)
 
@@ -127,6 +148,9 @@ Em ambientes corporativos rígidos com interceptação SSL e proxies de seguran�
 Se o LiteLLM estiver configurado com banco relacional (ex: PostgreSQL), ele aplicará migrações de banco na inicialização. Em caso de registros duplicados nas tabelas (ex: índices ou tags de *health-check* que quebram `UNIQUE INDEX`), o Prisma pode entrar num loop infinito de tentativas de *rollbacks* e comparações (diffs) de schema a cada inicialização, bloqueando o startup do proxy. Isso pode causar falsos-negativos (timeouts de scripts de health-check/start dizendo que o serviço não subiu na porta) e inflar os processos ocultos do banco de dados.
 
 - **Solução (Contenção Rápida):** Utilize `DISABLE_SCHEMA_UPDATE=true` no arquivo `.env` para pular a rotina de schema e subir o serviço mais rápido.
-- **Solução Definitiva:** Exclua manualmente as entradas corrompidas e duplicadas das tabelas no banco de dados para destravar as migrações (ex: apagando tuplas duplicadas na tabela `LiteLLM_DailyTagSpend` via PostgreSQL).
-- Se o script de controle continuar reportando erro de porta mas o processo aparecer como ativo logo em seguida no `status`, aumente o tempo limite (timeout) do loop de verificação de saúde no script de controle `litellm-control.sh` para `60` iterações de `1s` (ou superior).
+- **Solução Definitiva:** Exclua manualmente as entradas corrompidas e duplicadas das tabelas no banco de dados para destravar as migrações. Exemplo prático de deduplicação (mantendo apenas uma cópia) usando `ctid` no PostgreSQL para a tabela `LiteLLM_DailyTagSpend`:
+  ```sql
+  DELETE FROM "LiteLLM_DailyTagSpend" a USING "LiteLLM_DailyTagSpend" b WHERE a.ctid < b.ctid AND a.tag = b.tag;
+  ```
+- Se o script de controle continuar reportando erro de porta mas o processo aparecer como ativo logo em seguida no `status`, aumente o tempo limite (timeout) do loop de verificação de saúde no script de controle `litellm-control.sh` para `90` iterações de `1s` (ou superior), conforme implementado e verificado na prática para lidar com as inicializações lentas do Prisma.
 

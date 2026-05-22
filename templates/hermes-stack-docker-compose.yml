@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hermes_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: hermes_litellm
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+      - no_proxy=${no_proxy}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - LITELLM_MASTER_KEY=${MASTER_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DISABLE_SCHEMA_UPDATE=${DISABLE_SCHEMA_UPDATE}
+    volumes:
+      - /app/vt422387/litellm/config.yaml:/app/config.yaml:ro
+      - /home/vt422387/prisma-binaries:/app/prisma-binaries:ro
+    command: [
+      "--config", "/app/config.yaml",
+      "--port", "4000"
+    ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  hermes:
+    image: ghcr.io/nousresearch/hermes:latest
+    container_name: hermes_agent
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+      - no_proxy=${no_proxy}
+    volumes:
+      - ~/.hermes:/root/.hermes
+    command: ["hermes", "gateway", "--port", "8000", "--host", "0.0.0.0"]
+
+  hermes-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: hermes_webui
+    restart: always
+    ports:
+      - "8787:8080"
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+      - no_proxy=${no_proxy}
+      - OPENAI_API_BASE_URL=http://litellm:4000/v1
+      - OPENAI_API_KEY=${MASTER_KEY}
+    volumes:
+      - hermes_webui_data:/app/backend/data
+    depends_on:
+      - litellm
+
+volumes:
+  postgres_data:
+  hermes_webui_data:
